@@ -1,0 +1,40 @@
+# Go 빌드 산출물
+bin/
+build/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go 커버리지 리포트
+coverage.*
+coverage/
+coverage.out
+
+# 의존성/워크스페이스 파일 (필요 시)
+vendor/
+go.work
+go.work.sum
+
+# 로그 파일
+*.log
+
+# 환경 변수 파일
+.env
+.env.*
+
+# OS / 에디터별 잡파일
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 기타 임시 파일
+*.swp
+*.swo
+
+output
