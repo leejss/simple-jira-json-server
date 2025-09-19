@@ -10,14 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lpernett/godotenv"
-)
-
-const (
-	JiraBaseURL  = "https://jira.neowiz.com"
-	Username     = "leejss"
-	RawOutputDir = "output/raw"
-	OutputDir    = "output/data"
+	"github.com/leejss/jira-get/config"
 )
 
 type SearchRequest struct {
@@ -66,17 +59,14 @@ func (q *JQLQueryBuilder) SearchByYears(years []int, assignee string) string {
 }
 
 func main() {
-	err := godotenv.Load()
+	config, err := config.LoadConfig()
 
 	if err != nil {
 		fmt.Println("Error loading .env file")
 		return
 	}
 
-	apiToken := os.Getenv("JIRA_API_TOKEN")
-
 	queryBuilder := &JQLQueryBuilder{}
-
 	years := []int{2023, 2024, 2025}
 
 	// HTTP 클라이언트를 한 번만 생성하여 재사용
@@ -84,7 +74,7 @@ func main() {
 
 	for _, year := range years {
 		// 각 연도별 JQL 생성
-		jqlQuery := queryBuilder.SearchByYear(year, Username)
+		jqlQuery := queryBuilder.SearchByYear(year, config.Username)
 
 		// 요청 페이로드 구성
 		reqBody := SearchRequest{
@@ -95,10 +85,12 @@ func main() {
 		}
 
 		jsonBody, _ := json.Marshal(reqBody)
-		req, _ := http.NewRequest("POST", JiraBaseURL+"/rest/api/2/search", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("POST", config.JiraBaseURL+"/rest/api/2/search", bytes.NewBuffer(jsonBody))
+
+		// jiraClient.Search(year, Username)
 
 		// 인증 및 헤더 설정
-		req.Header.Set("Authorization", "Bearer "+apiToken)
+		req.Header.Set("Authorization", "Bearer "+config.JiraApiToken)
 		req.Header.Set("Content-Type", "application/json")
 
 		// 요청 실행
@@ -126,7 +118,7 @@ func main() {
 			}
 
 			// 연도별 파일 경로 생성 후 저장
-			outPath := filepath.Join(RawOutputDir, fmt.Sprintf("jira_%d.json", year))
+			outPath := filepath.Join(config.RawOutputDir, fmt.Sprintf("jira_%d.json", year))
 			if err := saveJSON(prettyJson.Bytes(), outPath); err != nil {
 				fmt.Printf("[%d] 저장 오류: %v\n", year, err)
 				return

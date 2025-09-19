@@ -25,7 +25,6 @@ go.work.sum
 
 # 환경 변수 파일
 .env
-.env.*
 
 # OS / 에디터별 잡파일
 .DS_Store
