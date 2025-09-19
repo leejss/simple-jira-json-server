@@ -1,4 +1,4 @@
-module github.com/leejss/jira-get
+module github.com/leejss/simple-json-server/cli
 
 go 1.22.4
 

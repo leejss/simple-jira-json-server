@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/leejss/jira-get/config"
+	"github.com/leejss/simple-json-server/cli/config"
 )
 
 type SearchRequest struct {
