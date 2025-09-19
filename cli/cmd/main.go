@@ -6,57 +6,38 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/leejss/simple-json-server/cli/config"
+	"github.com/leejss/simple-json-server/cli/internal/storage"
+	"github.com/leejss/simple-json-server/cli/jira"
 )
 
-type SearchRequest struct {
-	JQL        string   `json:"jql"`
-	StartAt    int      `json:"startAt"`
-	MaxResults int      `json:"maxResults"`
-	Fields     []string `json:"fields"`
-}
+// type SearchRequest struct {
+// 	JQL        string   `json:"jql"`
+// 	StartAt    int      `json:"startAt"`
+// 	MaxResults int      `json:"maxResults"`
+// 	Fields     []string `json:"fields"`
+// }
 
-func saveJSON(data []byte, outputPath string) error {
-	dir := filepath.Dir(outputPath)
+// type JQLQueryBuilder struct{} // stateless -> namespace
 
-	if err := os.MkdirAll(dir, 0765); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
+// func (q *JQLQueryBuilder) SearchByYear(year int, assignee string) string {
+// 	return fmt.Sprintf("assignee = %s AND created >= %d-01-01 AND created < %d-01-01 order by created ASC", assignee, year, year+1)
+// }
 
-	// 디렉토리가 준비되면 파일을 작성한다.
+// func (q *JQLQueryBuilder) SearchByYears(years []int, assignee string) string {
+// 	if len(years) == 0 {
+// 		return fmt.Sprintf("assignee = %s order by created ASC", assignee)
+// 	}
 
-	err := os.WriteFile(outputPath, data, 0644)
+// 	parts := make([]string, 0, len(years))
+// 	for _, year := range years {
+// 		parts = append(parts, fmt.Sprintf("(created >= %d-01-01 AND created < %d-01-01)", year, year+1))
+// 	}
 
-	if err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	fmt.Println("JSON saved to:", outputPath)
-	return nil
-}
-
-type JQLQueryBuilder struct{} // stateless -> namespace
-
-func (q *JQLQueryBuilder) SearchByYear(year int, assignee string) string {
-	return fmt.Sprintf("assignee = %s AND created >= %d-01-01 AND created < %d-01-01 order by created ASC", assignee, year, year+1)
-}
-
-func (q *JQLQueryBuilder) SearchByYears(years []int, assignee string) string {
-	if len(years) == 0 {
-		return fmt.Sprintf("assignee = %s order by created ASC", assignee)
-	}
-
-	parts := make([]string, 0, len(years))
-	for _, year := range years {
-		parts = append(parts, fmt.Sprintf("(created >= %d-01-01 AND created < %d-01-01)", year, year+1))
-	}
-
-	return fmt.Sprintf("assignee = %s AND (%s) order by created ASC", assignee, strings.Join(parts, " OR "))
-}
+// 	return fmt.Sprintf("assignee = %s AND (%s) order by created ASC", assignee, strings.Join(parts, " OR "))
+// }
 
 func main() {
 	config, err := config.LoadConfig()
@@ -66,18 +47,21 @@ func main() {
 		return
 	}
 
-	queryBuilder := &JQLQueryBuilder{}
+	queryBuilder := &jira.JQLQueryBuilder{}
+
 	years := []int{2023, 2024, 2025}
 
 	// HTTP 클라이언트를 한 번만 생성하여 재사용
 	client := &http.Client{}
+
+	// jiraClient := jira.NewJiraClient(config.JiraBaseURL, config.JiraApiToken)
 
 	for _, year := range years {
 		// 각 연도별 JQL 생성
 		jqlQuery := queryBuilder.SearchByYear(year, config.Username)
 
 		// 요청 페이로드 구성
-		reqBody := SearchRequest{
+		reqBody := jira.SearchRequest{
 			JQL:        jqlQuery,
 			StartAt:    0,
 			MaxResults: 100,
@@ -119,7 +103,7 @@ func main() {
 
 			// 연도별 파일 경로 생성 후 저장
 			outPath := filepath.Join(config.RawOutputDir, fmt.Sprintf("jira_%d.json", year))
-			if err := saveJSON(prettyJson.Bytes(), outPath); err != nil {
+			if err := storage.Save(prettyJson.Bytes(), outPath); err != nil {
 				fmt.Printf("[%d] 저장 오류: %v\n", year, err)
 				return
 			}
