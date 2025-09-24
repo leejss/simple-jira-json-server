@@ -7,7 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path/filepath"
+	"strings"
 
+	"github.com/leejss/simple-json-server/cli/config"
+	"github.com/leejss/simple-json-server/cli/internal/storage"
 	"github.com/leejss/simple-json-server/cli/jira"
 )
 
@@ -26,8 +31,16 @@ func buildHTTPRequest(ctx context.Context, baseURL, apiToken string, reqBody jir
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
+	base, err := url.Parse(strings.TrimRight(baseURL, "/"))
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse base URL: %w", err)
+	}
+
+	searchURL := base.ResolveReference(&url.URL{Path: "/rest/api/2/search"})
+
 	// Create http request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/rest/api/2/search", bytes.NewBuffer(bodyBytes))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, searchURL.String(), bytes.NewBuffer(bodyBytes))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -36,6 +49,7 @@ func buildHTTPRequest(ctx context.Context, baseURL, apiToken string, reqBody jir
 	// Set headers
 	req.Header.Set("Authorization", "Bearer "+apiToken)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	return req, nil
 }
@@ -58,12 +72,12 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, *jira.SearchResp
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("non-200 status code: %d", resp.StatusCode)
+		return body, nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
 	}
 
 	var parsed jira.SearchResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmarshal response body: %w", err)
+		return body, nil, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
 	return body, &parsed, nil
@@ -71,13 +85,87 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, *jira.SearchResp
 }
 
 func prettyJson(body []byte) ([]byte, error) {
-	var prettyJson bytes.Buffer
-	if err := json.Indent(&prettyJson, body, "", "  "); err != nil {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return nil, fmt.Errorf("empty response body")
+	}
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, body, "", "  "); err != nil {
 		return nil, fmt.Errorf("failed to indent JSON: %w", err)
 	}
-	return prettyJson.Bytes(), nil
+
+	return pretty.Bytes(), nil
 }
 
-func processYear() {}
+func processYear(
+	ctx context.Context,
+	client *http.Client,
+	cfg config.Config,
+	builder *jira.JQLQueryBuilder,
+	year int,
+) error {
+	const pageSize = 100
 
-func paginate() {}
+	reqBuilder := func(startAt int) jira.SearchRequest {
+		return buildSearchRequest(
+			builder.SearchByYear(year, cfg.Username),
+			startAt,
+			pageSize,
+			[]string{"key", "summary", "created", "description"},
+		)
+	}
+
+	issues, err := paginate(ctx, client, cfg, reqBuilder)
+	if err != nil {
+		return fmt.Errorf("(%d) paginate: %w", year, err)
+	}
+
+	raw, err := json.Marshal(issues)
+	if err != nil {
+		return fmt.Errorf("(%d) marshal issues: %w", year, err)
+	}
+
+	pretty, err := prettyJson(raw)
+	if err != nil {
+		return fmt.Errorf("(%d) format json: %w", year, err)
+	}
+
+	outPath := filepath.Join(cfg.RawOutputDir, fmt.Sprintf("jira_%d.json", year))
+	if err := storage.Save(pretty, outPath); err != nil {
+		return fmt.Errorf("(%d) save file: %w", year, err)
+	}
+
+	return nil
+}
+
+func paginate(ctx context.Context, client *http.Client, cfg config.Config, reqBuilder func(startAt int) jira.SearchRequest) ([]jira.Issue, error) {
+	var (
+		startAt   = 0
+		collected []jira.Issue
+	)
+
+	for {
+		reqBody := reqBuilder(startAt)
+		req, err := buildHTTPRequest(ctx, cfg.JiraBaseURL, cfg.JiraApiToken, reqBody)
+
+		if err != nil {
+			return nil, fmt.Errorf("paginate build request failed: %w", err)
+		}
+
+		raw, parsed, err := doRequest(client, req)
+
+		if err != nil {
+			return nil, fmt.Errorf("paginate request failed: %w (body: %s)", err, string(raw))
+		}
+
+		collected = append(collected, parsed.Issues...)
+		startAt += len(parsed.Issues)
+
+		if startAt >= parsed.Total || len(parsed.Issues) == 0 {
+			break
+		}
+
+	}
+
+	return collected, nil
+
+}

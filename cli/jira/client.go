@@ -6,7 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
+
+type Issue struct {
+	Key    string `json:"key"`
+	Fields struct {
+		Summary     string    `json:"summary"`
+		Created     time.Time `json:"created"`
+		Description string    `json:"description"`
+	} `json:"fields"`
+}
 
 type SearchRequest struct {
 	JQL        string   `json:"jql"`
@@ -16,9 +26,10 @@ type SearchRequest struct {
 }
 
 type SearchResponse struct {
-	StartAt    int `json:"startAt"`
-	MaxResults int `json:"maxResults"`
-	Total      int `json:"total"`
+	StartAt    int     `json:"startAt"`
+	MaxResults int     `json:"maxResults"`
+	Total      int     `json:"total"`
+	Issues     []Issue `json:"issues"`
 }
 
 type JiraClient struct {

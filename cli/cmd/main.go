@@ -83,3 +83,23 @@ func main() {
 	}
 
 }
+
+// func main() {
+// 	cfg, err := config.LoadConfig()
+// 	if err != nil {
+// 			fmt.Println("Error loading .env file")
+// 			return
+// 	}
+
+// 	client := &http.Client{}
+// 	queryBuilder := &jira.JQLQueryBuilder{}
+// 	years := []int{2023, 2024, 2025}
+
+// 	for _, year := range years {
+// 			ctx := context.Background()
+// 			if err := processYear(ctx, client, cfg, queryBuilder, year); err != nil {
+// 					fmt.Printf("[%d] 처리 실패: %v\n", year, err)
+// 					continue
+// 			}
+// 	}
+// }
