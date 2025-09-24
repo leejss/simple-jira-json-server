@@ -13,32 +13,6 @@ import (
 	"github.com/leejss/simple-json-server/cli/jira"
 )
 
-// type SearchRequest struct {
-// 	JQL        string   `json:"jql"`
-// 	StartAt    int      `json:"startAt"`
-// 	MaxResults int      `json:"maxResults"`
-// 	Fields     []string `json:"fields"`
-// }
-
-// type JQLQueryBuilder struct{} // stateless -> namespace
-
-// func (q *JQLQueryBuilder) SearchByYear(year int, assignee string) string {
-// 	return fmt.Sprintf("assignee = %s AND created >= %d-01-01 AND created < %d-01-01 order by created ASC", assignee, year, year+1)
-// }
-
-// func (q *JQLQueryBuilder) SearchByYears(years []int, assignee string) string {
-// 	if len(years) == 0 {
-// 		return fmt.Sprintf("assignee = %s order by created ASC", assignee)
-// 	}
-
-// 	parts := make([]string, 0, len(years))
-// 	for _, year := range years {
-// 		parts = append(parts, fmt.Sprintf("(created >= %d-01-01 AND created < %d-01-01)", year, year+1))
-// 	}
-
-// 	return fmt.Sprintf("assignee = %s AND (%s) order by created ASC", assignee, strings.Join(parts, " OR "))
-// }
-
 func main() {
 	config, err := config.LoadConfig()
 
@@ -70,8 +44,6 @@ func main() {
 
 		jsonBody, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest("POST", config.JiraBaseURL+"/rest/api/2/search", bytes.NewBuffer(jsonBody))
-
-		// jiraClient.Search(year, Username)
 
 		// 인증 및 헤더 설정
 		req.Header.Set("Authorization", "Bearer "+config.JiraApiToken)

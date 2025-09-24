@@ -15,6 +15,12 @@ type SearchRequest struct {
 	Fields     []string `json:"fields"`
 }
 
+type SearchResponse struct {
+	StartAt    int `json:"startAt"`
+	MaxResults int `json:"maxResults"`
+	Total      int `json:"total"`
+}
+
 type JiraClient struct {
 	client   *http.Client
 	baseURL  string
