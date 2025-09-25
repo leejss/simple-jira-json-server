@@ -140,10 +140,10 @@ func processYear(
 	return nil
 }
 
-func paginate(ctx context.Context, client *http.Client, cfg config.Config, reqBuilder func(startAt int) jira.SearchRequest) ([]jira.Issue, error) {
+func paginate(ctx context.Context, client *http.Client, cfg config.Config, reqBuilder func(startAt int) jira.SearchRequest) ([]jira.RawIssue, error) {
 	var (
 		startAt   = 0
-		collected []jira.Issue
+		collected []jira.RawIssue
 	)
 
 	for {

@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-type Issue struct {
+type RawIssue struct {
 	Key    string `json:"key"`
 	Fields struct {
 		Summary     string `json:"summary"`
@@ -25,10 +25,10 @@ type SearchRequest struct {
 }
 
 type SearchResponse struct {
-	StartAt    int     `json:"startAt"`
-	MaxResults int     `json:"maxResults"`
-	Total      int     `json:"total"`
-	Issues     []Issue `json:"issues"`
+	StartAt    int        `json:"startAt"`
+	MaxResults int        `json:"maxResults"`
+	Total      int        `json:"total"`
+	Issues     []RawIssue `json:"issues"`
 }
 
 type JiraClient struct {
