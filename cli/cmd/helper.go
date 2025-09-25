@@ -103,6 +103,9 @@ func processYear(
 	builder *jira.JQLQueryBuilder,
 	year int,
 ) error {
+
+	fmt.Printf("Processing year: %d\n", year)
+
 	const pageSize = 100
 
 	reqBuilder := func(startAt int) jira.SearchRequest {
@@ -151,10 +154,10 @@ func paginate(ctx context.Context, client *http.Client, cfg config.Config, reqBu
 			return nil, fmt.Errorf("paginate build request failed: %w", err)
 		}
 
-		raw, parsed, err := doRequest(client, req)
+		_, parsed, err := doRequest(client, req)
 
 		if err != nil {
-			return nil, fmt.Errorf("paginate request failed: %w (body: %s)", err, string(raw))
+			return nil, fmt.Errorf("paginate request failed: %w", err)
 		}
 
 		collected = append(collected, parsed.Issues...)

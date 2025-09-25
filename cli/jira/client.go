@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 )
 
 type Issue struct {
 	Key    string `json:"key"`
 	Fields struct {
-		Summary     string    `json:"summary"`
-		Created     time.Time `json:"created"`
-		Description string    `json:"description"`
+		Summary     string `json:"summary"`
+		Created     string `json:"created"`
+		Description string `json:"description"`
 	} `json:"fields"`
 }
 
