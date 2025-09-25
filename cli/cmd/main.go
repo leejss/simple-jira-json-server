@@ -1,38 +1,39 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/leejss/simple-json-server/cli/config"
 	"github.com/leejss/simple-json-server/cli/internal/storage"
 	"github.com/leejss/simple-json-server/cli/jira"
 )
 
 func main() {
-	// cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 
-	// if err != nil {
-	// 	fmt.Println("Error loading .env file")
-	// 	return
-	// }
+	if err != nil {
+		fmt.Println("Error loading .env file")
+		return
+	}
 
-	// ctx := context.Background()
-	// client := &http.Client{}
-	// builder := &jira.JQLQueryBuilder{}
-	// years := []int{2023, 2024, 2025}
+	ctx := context.Background()
+	client := &http.Client{}
+	builder := &jira.JQLQueryBuilder{}
+	years := []int{2023, 2024, 2025}
 
-	// for _, year := range years {
-	// 	if err := processYear(ctx, client, *cfg, builder, year); err != nil {
-	// 		fmt.Printf("[%d] 처리 실패: %v\n", year, err)
-	// 		continue
-	// 	}
-	// 	fmt.Println("처리 완료")
-	// }
-
-	// READ output/raw dir -> iterate file validate 이게 정말 내가 생성한 json인가 -> 틀리다면 skip. 맞다면 processing 진행 -> json을 읽고 구조체로 변환 -> 이 구조체에서 특정 필드를 선택 후 formatted struct 생성 -> 생성한 구조체를 다시 json으로 직렬화 -> output/formatted dir에 저장
+	for _, year := range years {
+		if err := processYear(ctx, client, *cfg, builder, year); err != nil {
+			fmt.Printf("[%d] 처리 실패: %v\n", year, err)
+			continue
+		}
+		fmt.Println("처리 완료")
+	}
 
 	// listRawFiles
 	files, err := listRawFiles("../output/raw")
