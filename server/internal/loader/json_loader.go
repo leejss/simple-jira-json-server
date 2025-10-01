@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/leejss/simple-json-server/server/internal/models"
@@ -23,7 +25,7 @@ func NewFileLoader(path string) *FileLoader {
 	}
 }
 
-func (f *FileLoader) LoadIssues(year string) ([]models.Issue, error) {
+func (f *FileLoader) LoadIssues(year int) ([]models.Issue, error) {
 	cacheKey := fmt.Sprintf("issues_%s", year)
 
 	f.mu.RLock()
@@ -52,4 +54,53 @@ func (f *FileLoader) LoadIssues(year string) ([]models.Issue, error) {
 	f.mu.Unlock()
 
 	return issues, nil
+}
+
+func (f *FileLoader) GetAvailableYears() ([]int, error) {
+	entries, err := os.ReadDir(f.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	var years []int
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "jira_") {
+			continue
+		}
+
+		yearStr := strings.TrimPrefix(entry.Name(), "jira_")
+		yearStr = strings.TrimSuffix(yearStr, ".json")
+
+		if year, err := strconv.Atoi(yearStr); err == nil {
+			years = append(years, year)
+		}
+	}
+
+	return years, nil
+}
+
+func (f *FileLoader) LoadAllYears() ([]models.Issue, error) {
+	years, err := f.GetAvailableYears()
+	if err != nil {
+		return nil, err
+	}
+
+	var allIssues []models.Issue
+	for _, year := range years {
+		issues, err := f.LoadIssues(year)
+		if err != nil {
+			continue
+		}
+
+		allIssues = append(allIssues, issues...)
+	}
+
+	return allIssues, nil
+}
+
+func (f *FileLoader) ClearCache() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cache = make(map[string][]models.Issue)
 }
